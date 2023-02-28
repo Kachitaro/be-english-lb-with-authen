@@ -18,14 +18,8 @@ export class UserCredentials extends Entity {
 
   @property({
     type: 'string',
-    required: true,
   })
-  userId: string;
-
-  @property({
-    type: 'string',
-  })
-  usersId?: string;
+  usersId: string;
   // Define well-known properties here
 
   // Indexer property to allow additional data

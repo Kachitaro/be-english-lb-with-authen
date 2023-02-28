@@ -12,9 +12,12 @@ import {MySequence} from './sequence';
 import { AuthenticationComponent } from "@loopback/authentication"
 import {
   JWTAuthenticationComponent,
+  TokenServiceBindings,
   UserServiceBindings,
 } from "@loopback/authentication-jwt"
 import { PostgresDataSource } from "./datasources"
+import {MyUserService} from './services/users.service';
+import {myJWTService} from './services/jwt.service';
 
 export {ApplicationConfig};
 
@@ -41,6 +44,9 @@ export class BeEnglishLbWithAuthenApplication extends BootMixin(
     this.component(JWTAuthenticationComponent)
     // Bind datasource
     this.dataSource(PostgresDataSource, UserServiceBindings.DATASOURCE_NAME)
+    this.bind(UserServiceBindings.USER_SERVICE).toClass(MyUserService as any);
+    this.bind(TokenServiceBindings.TOKEN_SERVICE).toClass(myJWTService as any);
+
 
     this.projectRoot = __dirname;
     // Customize @loopback/boot Booter Conventions here

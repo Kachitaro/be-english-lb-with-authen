@@ -1,9 +1,7 @@
 import {authenticate, TokenService} from '@loopback/authentication';
 import {
   Credentials,
-  MyUserService,
   TokenServiceBindings,
-  UserRepository,
   UserServiceBindings
 } from '@loopback/authentication-jwt';
 import {inject} from '@loopback/core';
@@ -26,10 +24,12 @@ import {SecurityBindings, UserProfile} from '@loopback/security';
 import {genSalt, hash} from 'bcryptjs';
 import _ from 'lodash';
 
-//authorizor
+
 import {authorize} from '@loopback/authorization';
 import {Users} from '../models';
+import {UsersRepository} from '../repositories';
 import {basicAuthorization} from '../services/authorizers';
+import {MyUserService} from '../services/users.service';
 
 @model()
 export class NewUserRequest extends Users {
@@ -40,28 +40,18 @@ export class NewUserRequest extends Users {
   password: string;
 }
 
-const CredentialsSchema: SchemaObject = {
-  type: 'object',
-  required: ['email', 'password'],
-  properties: {
-    email: {
-      type: 'string',
-      format: 'email',
-    },
-    password: {
-      type: 'string',
-      minLength: 8,
-    },
-  },
-};
+@model()
+class SignInPayload {
+  @property({
+    type: 'string',
+  })
+  email: string;
 
-export const CredentialsRequestBody = {
-  description: 'The input of login function',
-  required: true,
-  content: {
-    'application/json': {schema: CredentialsSchema},
-  },
-};
+  @property({
+    type: 'string',
+  })
+  password: string;
+}
 
 export class UserController {
   [x: string]: any;
@@ -72,7 +62,7 @@ export class UserController {
     public userService: MyUserService,
     @inject(SecurityBindings.USER, {optional: true})
     public user: UserProfile,
-    @repository(UserRepository) protected userRepository: UserRepository,
+    @repository(UsersRepository) protected usersRepository: UsersRepository,
   ) {}
 
   @post('/users/login', {
@@ -95,8 +85,17 @@ export class UserController {
     },
   })
   async login(
-    @requestBody(CredentialsRequestBody) credentials: Credentials,
-  ): Promise<{token: string}> {
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(SignInPayload, {
+            title: 'SignInPayload',
+          }),
+        },
+      },
+    })
+    credentials: SignInPayload,
+  ) {
     // ensure the user exists, and the password is correct
     const user = await this.userService.verifyCredentials(credentials);
     // convert a User object into a UserProfile object (reduced set of properties)
@@ -159,12 +158,11 @@ export class UserController {
       ...newUserRequest,
       roles: 'customer',
     };
-    console.log(newUser.roles);
     const password = await hash(newUser.password, await genSalt());
-    const savedUser = await this.userRepository.create(
+    const savedUser = await this.usersRepository.create(
       _.omit(newUser, 'password'),
     );
-    await this.userRepository.userCredentials(savedUser.id).create({password});
+    await this.usersRepository.userCredentials(savedUser.id).create({password});
     return savedUser;
   }
 
@@ -186,6 +184,6 @@ export class UserController {
     @param.path.string('id') id: string,
     @param.filter(Users, {exclude: 'where'}) filter?: FilterExcludingWhere<Users>,
   ): Promise<Users> {
-    return this.userRepository.findById(id, filter);
+    return this.usersRepository.findById(id, filter);
   }
 }

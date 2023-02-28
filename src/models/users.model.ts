@@ -11,11 +11,6 @@ export class Users extends Entity {
   })
   id: string;
 
-  @property({
-    type: 'string',
-  })
-  realm?: string;
-
   // must keep it
   @property({
     type: 'string',
