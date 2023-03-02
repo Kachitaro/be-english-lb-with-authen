@@ -32,20 +32,9 @@ export class Users extends Entity {
   userCredentials: UserCredentials;
 
   @property({
-    type: 'boolean',
-  })
-  emailVerified?: boolean;
-
-  @property({
-    type: 'string',
-  })
-  verificationToken?: string;
-
-  @property({
     type: 'string',
   })
   roles?: string;
-
 
   // Indexer property to allow additional data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
