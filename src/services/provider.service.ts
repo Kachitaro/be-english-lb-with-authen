@@ -20,10 +20,8 @@ export class MyAuthorizationProvider implements Provider<Authorizer> {
     context: AuthorizationContext,
     metadata: AuthorizationMetadata,
   ) {
-    console.log('IN PROVIDER CONTEXT: ');
     // No access if authorization details are missing
     let currentUser: UserProfile;
-
     if (context.principals.length > 0) {
       const user = _.pick(context.principals[0], ['id', 'name', 'role']);
       currentUser = {

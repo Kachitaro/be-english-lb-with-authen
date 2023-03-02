@@ -12,8 +12,6 @@ export async function basicAuthorization(
   metadata: AuthorizationMetadata,
 ) {
   const getId = await authorizationCtx.invocationContext.args[0];
-  console.log('ID: ', getId);
-
   let currentUserId: number;
   if (authorizationCtx.principals.length > 0) {
     const user = _.pick(authorizationCtx.principals[0], [
@@ -21,13 +19,10 @@ export async function basicAuthorization(
       'name',
       'role',
     ]);
-    console.log('USER: ', user);
     currentUserId = user.user_id;
   } else {
     return AuthorizationDecision.DENY;
   }
-  console.log('IN META: ', metadata.allowedRoles);
-  console.log('userID', currentUserId, getId);
 
   if (getId == currentUserId) {
     return AuthorizationDecision.ABSTAIN;

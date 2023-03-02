@@ -7,7 +7,6 @@ import jwt from 'jsonwebtoken';
 export class myJWTService implements TokenService {
   constructor() {}
   verifyToken(token: string) {
-    console.log('IM VERIFY');
     if (!token) {
       throw new HttpErrors.Unauthorized(
         `Error verifying token : 'token' is null`,
@@ -25,7 +24,6 @@ export class myJWTService implements TokenService {
       console.log(e);
       return e;
     }
-    console.log(userProfile);
     return userProfile;
   }
 
@@ -34,7 +32,6 @@ export class myJWTService implements TokenService {
   // }
 
   async generateToken(userProfile: UserProfile) {
-    console.log(userProfile);
     const privateKey = 'this-is-my-secret-key';
     const token = jwt.sign(
       {
