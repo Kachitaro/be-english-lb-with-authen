@@ -22,6 +22,7 @@ export class MyAuthorizationProvider implements Provider<Authorizer> {
   ) {
     // No access if authorization details are missing
     let currentUser: UserProfile;
+
     if (context.principals.length > 0) {
       const user = _.pick(context.principals[0], ['id', 'name', 'role']);
       currentUser = {
@@ -35,8 +36,6 @@ export class MyAuthorizationProvider implements Provider<Authorizer> {
     if (!currentUser.roles) {
       return AuthorizationDecision.DENY;
     }
-
-    console.log('test metadata', metadata.allowedRoles);
     // Authorize everything that does not have a allowedRoles property
     if (!metadata.allowedRoles) {
       return AuthorizationDecision.ALLOW;
@@ -48,22 +47,17 @@ export class MyAuthorizationProvider implements Provider<Authorizer> {
         roleIsAllowed = true;
       }
     }
-    console.log(
-      '[roles]',
-      JSON.stringify({
-        roles: metadata.allowedRoles,
-        userRoles: currentUser.roles,
-      }),
-    );
     if (roleIsAllowed) {
+
       return AuthorizationDecision.ALLOW;
     }
 
-    // Admin and support accounts bypass id verification
+    // Admin and manager accounts bypass id verification
     if (
       currentUser.roles.includes('admin') ||
-      currentUser.roles.includes('support')
+      currentUser.roles.includes('manager')
     ) {
+      //console.log('HERE 6');
       return AuthorizationDecision.ALLOW;
     }
 
@@ -75,6 +69,8 @@ export class MyAuthorizationProvider implements Provider<Authorizer> {
     if (currentUser[securityId] === context.invocationContext.args[0]) {
       return AuthorizationDecision.ALLOW;
     }
+
+    //console.log('HERE 7');
     return AuthorizationDecision.DENY;
   }
 }

@@ -1,5 +1,5 @@
 import {Entity, hasOne, model, property} from '@loopback/repository';
-import {UserCredentials} from './user-credentials.model';
+import {Manager} from './manager.model';
 
 @model()
 export class Users extends Entity {
@@ -17,8 +17,9 @@ export class Users extends Entity {
   })
   username?: string;
 
-  // must keep it
-  // feat email unique
+  @hasOne(() => Manager)
+  manager: Manager;
+
   @property({
     type: 'string',
     required: true,
@@ -28,13 +29,15 @@ export class Users extends Entity {
   })
   email: string;
 
-  @hasOne(() => UserCredentials)
-  userCredentials: UserCredentials;
+  @property({
+    type: 'string',
+  })
+  password: string;
 
   @property({
     type: 'string',
   })
-  roles?: string;
+  roles: string;
 
   // Indexer property to allow additional data
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

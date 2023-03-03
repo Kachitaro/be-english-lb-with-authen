@@ -1,63 +1,34 @@
-import {authenticate, TokenService} from '@loopback/authentication';
+import {authenticate} from '@loopback/authentication';
 import {
-  Credentials,
   TokenServiceBindings,
   UserServiceBindings
 } from '@loopback/authentication-jwt';
 import {inject} from '@loopback/core';
-import {
-  FilterExcludingWhere,
-  model,
-  property,
-  repository
-} from '@loopback/repository';
+import { repository } from '@loopback/repository';
 import {
   get,
-  getModelSchemaRef,
   param,
+  patch,
+  getModelSchemaRef,
   post,
   requestBody,
   response,
-  SchemaObject
+  HttpErrors,
 } from '@loopback/rest';
 import {SecurityBindings, UserProfile} from '@loopback/security';
-import {genSalt, hash} from 'bcryptjs';
+import { genSalt, hash, compare } from 'bcryptjs';
 import _ from 'lodash';
-
-
 import {authorize} from '@loopback/authorization';
 import {Users} from '../models';
 import {UsersRepository} from '../repositories';
 import {basicAuthorization} from '../services/authorizers';
 import {MyUserService} from '../services/users.service';
-
-@model()
-export class NewUserRequest extends Users {
-  @property({
-    type: 'string',
-    required: true,
-  })
-  password: string;
-}
-
-@model()
-class SignInPayload {
-  @property({
-    type: 'string',
-  })
-  email: string;
-
-  @property({
-    type: 'string',
-  })
-  password: string;
-}
-
+import { myJWTService } from './../services/jwt.service';
 export class UserController {
   [x: string]: any;
   constructor(
     @inject(TokenServiceBindings.TOKEN_SERVICE)
-    public jwtService: TokenService,
+    public jwtService: myJWTService,
     @inject(UserServiceBindings.USER_SERVICE)
     public userService: MyUserService,
     @inject(SecurityBindings.USER, {optional: true})
@@ -65,7 +36,7 @@ export class UserController {
     @repository(UsersRepository) protected usersRepository: UsersRepository,
   ) {}
 
-  @post('/users/login', {
+  @post('/users_login', {
     responses: {
       '200': {
         description: 'Token',
@@ -88,19 +59,18 @@ export class UserController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(SignInPayload, {
+          schema: getModelSchemaRef(Users, {
             title: 'SignInPayload',
           }),
         },
       },
     })
-    credentials: SignInPayload,
+    UsersLogin: Users,
   ) {
     // ensure the user exists, and the password is correct
-    const user = await this.userService.verifyCredentials(credentials);
+    const user = await this.userService.verifyCredentials(UsersLogin);
     // convert a User object into a UserProfile object (reduced set of properties)
     const userProfile = this.userService.convertToUserProfile(user);
-
     // create a JSON Web Token based on the user profile
     const token = await this.jwtService.generateToken(userProfile);
     return {token};
@@ -128,10 +98,49 @@ export class UserController {
     return currentUserProfile;
   }
 
-  @post('/signup', {
+  @authenticate('jwt')
+  @authorize({
+    allowedRoles: ['user'],
+    scopes: ['patch'],
+    voters: [basicAuthorization],
+  })
+  @patch('/change_password/{id}',{
+    responses:{
+      '204': {
+        description: 'Password update successful ',
+      }
+    }
+  })
+  async patchPassword(
+    @param.path.string('id') id: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(Users , {
+            exclude: ['id','username','email','roles'],
+          }),
+        },
+      },
+    }) Users: Omit<Users, 'id'|'username'|'email'|'roles'>
+  ) {
+    console.log(Users.password);
+    const currentUser  = await this.usersRepository.findOne({
+      where: {id: id},
+    });
+    if (!currentUser) {
+      throw new HttpErrors.NotFound('User not found');
+    }
+
+    const newPassword = await hash(Users.password, await genSalt());
+    await this.usersRepository.updateById(id, {
+    password: newPassword,
+    });
+  }
+
+  @post('/create_user', {
     responses: {
       '200': {
-        description: 'User hehe',
+        description: 'User',
         content: {
           'application/json': {
             schema: {
@@ -146,45 +155,42 @@ export class UserController {
     @requestBody({
       content: {
         'application/json': {
-          schema: getModelSchemaRef(NewUserRequest, {
+          schema: getModelSchemaRef(Users, {
             title: 'NewUser',
-            
+            exclude: ['id'],
           }),
         },
       },
     })
-    newUserRequest: NewUserRequest
+    Users: Omit<Users, 'id'>
   ): Promise<Users> {
+    const password = await hash(Users.password, await genSalt());
     const newUser = {
-      ...newUserRequest,
-      roles: 'customer',
-    };
-    const password = await hash(newUser.password, await genSalt());
-    const savedUser = await this.usersRepository.create(
-      _.omit(newUser, 'password'),
-    );
-    await this.usersRepository.userCredentials(savedUser.id).create({password});
-    return savedUser;
+      ...Users,
+      password
+    }
+    const User = await this.usersRepository.create(newUser);
+    await this.usersRepository.manager(User.id).create(_.omit(Users, 'password','roles'));
+    return User;
   }
 
-  @get('/users/{id}')
+  @authenticate('jwt')
+  @authorize({
+    allowedRoles: ['admin','manager'],
+    scopes: ['view-all'],
+  })
+  @get('/users')
   @response(200, {
-    description: 'Get user by id',
+    description: 'Get all user',
     content: {
       'application/json': {
-        schema: getModelSchemaRef(Users, {includeRelations: true}),
+        schema: getModelSchemaRef(Users, {includeRelations: true, exclude: ['password']}),
       },
     },
   })
-  @authenticate('jwt')
-  @authorize({
-    allowedRoles: ['admin', 'customer'],
-    voters: [basicAuthorization],
-  })
-  async findById(
-    @param.path.string('id') id: string,
-    @param.filter(Users, {exclude: 'where'}) filter?: FilterExcludingWhere<Users>,
-  ): Promise<Users> {
-    return this.usersRepository.findById(id, filter);
+  async find(
+  ): Promise<Users[]> {
+    return await this.usersRepository.find();
   }
 }
+

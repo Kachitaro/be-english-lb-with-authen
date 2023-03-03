@@ -44,7 +44,7 @@ export class BeEnglishLbWithAuthenApplication extends BootMixin(
     });
     this.component(RestExplorerComponent);
     // Mount authentication system
-    this.component(AuthenticationComponent)
+    this.component(AuthenticationComponent);
     this.component(AuthorizationComponent);
     //Bind customize provider
     this.bind('authorizationProviders.my-authorizer-provider')

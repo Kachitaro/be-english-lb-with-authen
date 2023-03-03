@@ -1,32 +1,29 @@
 import {
   AuthorizationContext,
   AuthorizationDecision,
-  AuthorizationMetadata,
+  AuthorizationMetadata
 } from '@loopback/authorization';
-import _ from 'lodash';
-
+import {securityId, UserProfile} from '@loopback/security';
 // Instance level authorizer
 // Can be also registered as an authorizer, depends on users' need.
 export async function basicAuthorization(
   authorizationCtx: AuthorizationContext,
   metadata: AuthorizationMetadata,
 ) {
+  let currentUser: UserProfile;
   const getId = await authorizationCtx.invocationContext.args[0];
-  let currentUserId: number;
+  console.log('ID: ', getId);
   if (authorizationCtx.principals.length > 0) {
-    const user = _.pick(authorizationCtx.principals[0], [
-      'user_id',
-      'name',
-      'role',
-    ]);
-    currentUserId = user.user_id;
+    const user = authorizationCtx.principals[0];
+    currentUser = user;
   } else {
     return AuthorizationDecision.DENY;
   }
 
-  if (getId == currentUserId) {
+  if (getId == currentUser[securityId]) {
+    console.log('HERE 3');
     return AuthorizationDecision.ABSTAIN;
   }
-
+  
   return AuthorizationDecision.DENY;
 }

@@ -37,8 +37,9 @@ export class myJWTService implements TokenService {
       {
         [securityId]: userProfile.id.toString(),
         user_id: userProfile.id,
+        name: userProfile.name,
         email: userProfile.email,
-        role: userProfile.role,
+        role: userProfile.roles,
       },
       privateKey,
       {

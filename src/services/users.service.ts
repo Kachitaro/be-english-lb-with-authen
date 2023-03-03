@@ -20,28 +20,21 @@ export class MyUserService implements UserService<Users, Credentials> {
     @repository(UsersRepository) public usersRepository: UsersRepository,
   ) {}
 
-  async verifyCredentials(credentials: Credentials): Promise<Users> {
+  async verifyCredentials(UsersLogin: Credentials): Promise<Users> {
     const invalidCredentialsError = 'Invalid email or password.';
 
     const foundUser = await this.usersRepository.findOne({
-      where: {email: credentials.email},
+      where: {email: UsersLogin.email},
     });
     if (!foundUser) {
       throw new HttpErrors.Unauthorized(invalidCredentialsError);
     }
 
-    const credentialsFound = await this.usersRepository.findCredentials(
-      foundUser.id,
-    );
-    if (!credentialsFound) {
-      throw new HttpErrors.Unauthorized(invalidCredentialsError);
-    }
-
     const passwordMatched = await compare(
-      credentials.password,
-      credentialsFound.password,
+      UsersLogin.password,
+      foundUser.password,
     );
-
+    console.log(passwordMatched);
     if (!passwordMatched) {
       throw new HttpErrors.Unauthorized(invalidCredentialsError);
     }
