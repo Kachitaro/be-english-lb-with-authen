@@ -14,7 +14,7 @@ WORKDIR /home/node/app
 # where available (npm@5+)
 COPY --chown=node package*.json ./
 
-RUN npm install
+RUN yarn
 
 # Bundle app source code
 COPY --chown=node . .

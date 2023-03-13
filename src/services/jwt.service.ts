@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 export class myJWTService implements TokenService {
   constructor() {}
   verifyToken(token: string) {
-    if (!token) {
+    if (!token || token === 'null') {
       throw new HttpErrors.Unauthorized(
         `Error verifying token : 'token' is null`,
       );

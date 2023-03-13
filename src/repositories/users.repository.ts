@@ -9,6 +9,7 @@ export class UsersRepository extends DefaultCrudRepository<
   typeof Users.prototype.id,
   UsersRelations
 > {
+  [x: string]: any;
 
   public readonly manager: HasOneRepositoryFactory<Manager, typeof Users.prototype.id>;
 

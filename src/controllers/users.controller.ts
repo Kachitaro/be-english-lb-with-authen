@@ -4,9 +4,10 @@ import {
   UserServiceBindings
 } from '@loopback/authentication-jwt';
 import {inject} from '@loopback/core';
-import { repository } from '@loopback/repository';
+import { repository, Where } from '@loopback/repository';
 import {
   get,
+  del,
   param,
   patch,
   getModelSchemaRef,
@@ -137,15 +138,53 @@ export class UserController {
     });
   }
 
+  @authenticate('jwt')
+  @authorize({
+    allowedRoles: ['user'],
+    scopes: ['patch'],
+  })
+  @patch('/update_user/{id}',{
+    responses:{
+      '204': {
+        description: 'User update successful ',
+      }
+    }
+  })
+  async patchInfo(
+    @param.path.string('id') id: string,
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(Users , {
+            exclude: ['id','password','roles'],
+          }),
+        },
+      },
+    }) Users: Omit<Users, 'id'|'password'|'roles'>
+  ) {
+    const currentUser  = await this.usersRepository.findOne({
+      where: {id: id},
+    });
+    if (!currentUser) {
+      throw new HttpErrors.NotFound('User not found');
+    }
+    console.log("co nguoi");
+    console.log(Users);
+    await this.usersRepository.updateById(id, {
+      email: Users.email,
+      username: Users.username
+    });
+  }
+
   @post('/create_user', {
     responses: {
       '200': {
         description: 'User',
         content: {
           'application/json': {
-            schema: {
-              'x-ts-type': Users,
-            },
+            schema: getModelSchemaRef(Users,{
+              exclude: ['id', 'password']
+            })
           },
         },
       },
@@ -172,6 +211,20 @@ export class UserController {
     const User = await this.usersRepository.create(newUser);
     await this.usersRepository.manager(User.id).create(_.omit(Users, 'password','roles'));
     return User;
+  }
+
+  @authenticate('jwt')
+  @del('/delete_user/{id}',{
+    responses: {
+      '204':{
+        description: 'Delete User success',
+      }
+    }
+  })
+  async delete(
+    @param.path.string('id') id: string,
+  ): Promise<void>{
+    return this.usersRepository.deleteById(id)
   }
 
   @authenticate('jwt')
