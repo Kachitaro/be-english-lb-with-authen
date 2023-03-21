@@ -3,28 +3,23 @@ import {
   TokenServiceBindings,
   UserServiceBindings
 } from '@loopback/authentication-jwt';
+import {authorize} from '@loopback/authorization';
 import {inject} from '@loopback/core';
-import { repository, Where } from '@loopback/repository';
+import {repository} from '@loopback/repository';
 import {
-  get,
-  del,
-  param,
-  patch,
-  getModelSchemaRef,
-  post,
+  del, get, getModelSchemaRef, HttpErrors, param,
+  patch, post,
   requestBody,
-  response,
-  HttpErrors,
+  response
 } from '@loopback/rest';
 import {SecurityBindings, UserProfile} from '@loopback/security';
-import { genSalt, hash, compare } from 'bcryptjs';
+import {genSalt, hash} from 'bcryptjs';
 import _ from 'lodash';
-import {authorize} from '@loopback/authorization';
 import {Users} from '../models';
 import {UsersRepository} from '../repositories';
 import {basicAuthorization} from '../services/authorizers';
 import {MyUserService} from '../services/users.service';
-import { myJWTService } from './../services/jwt.service';
+import {myJWTService} from './../services/jwt.service';
 export class UserController {
   [x: string]: any;
   constructor(
@@ -156,11 +151,11 @@ export class UserController {
       content: {
         'application/json': {
           schema: getModelSchemaRef(Users , {
-            exclude: ['id','password','roles'],
+            exclude: ['id','password','email'],
           }),
         },
       },
-    }) Users: Omit<Users, 'id'|'password'|'roles'>
+    }) Users: Omit<Users, 'id'|'password'|'email'>
   ) {
     const currentUser  = await this.usersRepository.findOne({
       where: {id: id},
@@ -168,10 +163,8 @@ export class UserController {
     if (!currentUser) {
       throw new HttpErrors.NotFound('User not found');
     }
-    console.log("co nguoi");
-    console.log(Users);
     await this.usersRepository.updateById(id, {
-      email: Users.email,
+      roles: Users.roles,
       username: Users.username
     });
   }
@@ -198,19 +191,21 @@ export class UserController {
             title: 'NewUser',
             exclude: ['id'],
           }),
+
         },
       },
     })
-    Users: Omit<Users, 'id'>
-  ): Promise<Users> {
-    const password = await hash(Users.password, await genSalt());
+    user: Omit<Users, 'id'>
+  ): Promise<Omit<Users,'password'>> {
+    const password = await hash(user.password, await genSalt());
     const newUser = {
-      ...Users,
+      ...user,
       password
     }
-    const User = await this.usersRepository.create(newUser);
-    await this.usersRepository.manager(User.id).create(_.omit(Users, 'password','roles'));
-    return User;
+    const saved: Omit<Users,'password'> = await this.usersRepository.create(newUser);
+    await this.usersRepository.manager(user.id).create(_.omit(user, 'password','roles'));
+    delete saved.password;
+    return saved;
   }
 
   @authenticate('jwt')
