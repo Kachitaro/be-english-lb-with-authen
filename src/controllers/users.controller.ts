@@ -5,7 +5,7 @@ import {
 } from '@loopback/authentication-jwt';
 import {authorize} from '@loopback/authorization';
 import {inject} from '@loopback/core';
-import {repository} from '@loopback/repository';
+import {Count, CountSchema, repository, Where} from '@loopback/repository';
 import {
   del, get, getModelSchemaRef, HttpErrors, param,
   patch, post,
@@ -220,6 +220,17 @@ export class UserController {
     @param.path.string('id') id: string,
   ): Promise<void>{
     return this.usersRepository.deleteById(id)
+  }
+
+  @get('/users/count')
+  @response(200, {
+    description: 'Users model count',
+    content: {'application/json': {schema: CountSchema}},
+  })
+  async count(
+    @param.where(Users) where?: Where<Users>,
+  ): Promise<Count> {
+    return this.usersRepository.count(where);
   }
 
   @authenticate('jwt')
